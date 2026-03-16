@@ -57,3 +57,48 @@ def congruence_additive(xo, c, g, number_ri):
 
 def congruence_multiplicative(xo, k, g, number_ri):
     return congruence(xo, k, 0, g, number_ri)
+
+
+# Distribuciones uniforme y normal
+
+def general_uniform(list_ri, range_min, range_max):
+    list_ni = []
+    for ri in list_ri:
+        ni = range_min + (range_max - range_min) * ri
+        list_ni.append(ni)
+
+    return list_ni
+
+
+def uniform_distribution_congruence(xo, k, c, g, range_min, range_max, number_ni):
+    list_ri = congruence(xo, k, c, g, number_ni)
+    list_ni = general_uniform(list_ri, range_min, range_max)
+
+    return list_ni
+
+
+def uniform_distribution_multiplicative(xo, k, g, range_min, range_max, number_ni):
+    list_ri = congruence_multiplicative(xo, k, g, number_ni)
+    list_ni = general_uniform(list_ri, range_min, range_max)
+
+    return list_ni
+
+
+def uniform_distribution_additive(xo, c, g, range_min, range_max, number_ni):
+    list_ri = congruence_additive(xo, c, g, number_ni)
+    list_ni = general_uniform(list_ri, range_min, range_max)
+
+    return list_ni
+
+
+def uniform_mid_square(seed, range_min, range_max, number_ri):
+    list_ri = mid_square(seed, number_ri)
+    list_ni = general_uniform(list_ri, range_min, range_max)
+
+    return list_ni
+
+
+if __name__ == '__main__':
+    list = uniform_distribution_congruence(7, 100, 21, 12, 4, 100, 20)
+    for ni in list:
+        print(ni)
