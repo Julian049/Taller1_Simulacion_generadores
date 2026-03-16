@@ -12,14 +12,12 @@ FIELDS = {
     "congruencial":         ["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)"],
     "aditivo":              ["Semilla (X0)", "Incremento (c)", "Módulo (g)"],
     "multiplicativo":       ["Semilla (X0)", "Multiplicador (k)", "Módulo (g)"],
-    # Uniform distributions
     "uniforme_cuadrados":   ["Semilla (X0)", "Mínimo", "Máximo"],
     "uniforme_congruencial":["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
     "uniforme_aditivo":     ["Semilla (X0)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
     "uniforme_multiplicativo": ["Semilla (X0)", "Multiplicador (k)", "Módulo (g)", "Mínimo", "Máximo"],
 }
 
-# Options that cannot load a CSV file
 NO_FILE_OPTIONS = {"aditivo", "multiplicativo", "uniforme_aditivo", "uniforme_multiplicativo"}
 
 
@@ -173,7 +171,7 @@ def run():
         case "congruencial":
             algorithm_name = "Congruencial"
             if file_path:
-                params_list = import_congruent_seeds(file_path)
+                params_list = import_parameter_seeds(file_path)
             else:
                 params_list = [{
                     "xo": entries["Semilla (X0)"].get(),
@@ -211,8 +209,6 @@ def run():
                 "params": {"Semilla (X0)": seed, "Multiplicador (k)": multiplier, "Módulo (g)": modulus},
                 "numbers": numbers
             })
-
-        # ── Distribución uniforme ─────────────────────────────────────────────
 
         case "uniforme_cuadrados":
             algorithm_name = "Uniforme – Cuadrados medios"
@@ -311,13 +307,11 @@ def main():
 
     entries = {}
 
-    # ── Algorithm selector ────────────────────────────────────────────────────
     selector_frame = tk.Frame(root)
     selector_frame.pack(pady=(10, 0), anchor="w", padx=20)
 
     var_option = tk.StringVar(value="cuadrados")
 
-    # Base generators (left column)
     base_frame = tk.LabelFrame(selector_frame, text="Generadores base", padx=8, pady=4)
     base_frame.pack(side="left", padx=(0, 15), anchor="n")
 
@@ -331,7 +325,6 @@ def main():
         tk.Radiobutton(base_frame, text=label, variable=var_option,
                        value=value, command=update_fields).pack(anchor="w")
 
-    # Uniform distributions (right column)
     uni_frame = tk.LabelFrame(selector_frame, text="Distribución uniforme", padx=8, pady=4)
     uni_frame.pack(side="left", anchor="n")
 
@@ -345,7 +338,6 @@ def main():
         tk.Radiobutton(uni_frame, text=label, variable=var_option,
                        value=value, command=update_fields).pack(anchor="w")
 
-    # ── Amount ────────────────────────────────────────────────────────────────
     amount_frame = tk.Frame(root)
     amount_frame.pack(pady=(8, 0))
     tk.Label(amount_frame, text="Cantidad de números a generar:").pack(side="left", padx=(0, 5))
@@ -353,11 +345,9 @@ def main():
     amount_entry.pack(side="left")
     amount_entry.bind("<KeyRelease>", validate)
 
-    # ── Dynamic parameter fields ──────────────────────────────────────────────
     fields_frame = tk.Frame(root)
     fields_frame.pack(pady=10)
 
-    # ── Buttons ───────────────────────────────────────────────────────────────
     buttons_frame = tk.Frame(root)
     buttons_frame.pack(pady=6)
 
@@ -369,7 +359,6 @@ def main():
     run_btn = tk.Button(buttons_frame, text="Ejecutar", command=run, width=15, state="disabled")
     run_btn.pack(side="left", padx=10)
 
-    # ── File status ───────────────────────────────────────────────────────────
     file_status_frame = tk.Frame(root)
     file_status_frame.pack(pady=(0, 5))
 
