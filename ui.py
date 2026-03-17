@@ -101,7 +101,7 @@ def validate(*args):
 def show_results_window(simulations, algorithm_name, amount):
     win = tk.Toplevel()
     win.title("Resultados")
-    win.geometry("350x550")
+    win.geometry("350x750")
 
     canvas = tk.Canvas(win)
     scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas.yview)
@@ -135,7 +135,7 @@ def show_results_window(simulations, algorithm_name, amount):
         lb_scroll.pack(side="right", fill="y")
 
         listbox = tk.Listbox(listbox_frame, yscrollcommand=lb_scroll.set,
-                             font=("Courier", 10), height=6)
+                             font=("Courier", 10), height=10)
         listbox.pack(fill="x")
         lb_scroll.config(command=listbox.yview)
 
