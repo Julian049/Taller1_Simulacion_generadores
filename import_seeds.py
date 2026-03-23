@@ -1,6 +1,6 @@
 import csv
 
-def import_congruent_seeds(path):
+def import_parameter_seeds(path):
     parameters = []
     with open(path, mode='r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)

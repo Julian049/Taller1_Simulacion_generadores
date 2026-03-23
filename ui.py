@@ -1,14 +1,24 @@
 import tkinter as tk
 from tkinter import filedialog
-from generators import mid_square, congruence, congruence_additive, congruence_multiplicative
-from import_seeds import import_congruent_seeds, import_mid_square_seeds
+from generators import (
+    mid_square, congruence, congruence_additive, congruence_multiplicative,
+    uniform_mid_square, uniform_distribution_congruence,
+    uniform_distribution_additive, uniform_distribution_multiplicative,
+)
+from import_seeds import import_parameter_seeds, import_mid_square_seeds
 
 FIELDS = {
-    "cuadrados": ["Semilla"],
-    "congruencial": ["Semilla", "Multiplicador", "Incremento", "Módulo"],
-    "aditivo": ["Semilla", "Incremento", "Módulo"],
-    "multiplicativo": ["Semilla", "Multiplicador", "Módulo"],
+    "cuadrados":            ["Semilla (X0)"],
+    "congruencial":         ["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)"],
+    "aditivo":              ["Semilla (X0)", "Incremento (c)", "Módulo (g)"],
+    "multiplicativo":       ["Semilla (X0)", "Multiplicador (k)", "Módulo (g)"],
+    "uniforme_cuadrados":   ["Semilla (X0)", "Mínimo", "Máximo"],
+    "uniforme_congruencial":["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
+    "uniforme_aditivo":     ["Semilla (X0)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
+    "uniforme_multiplicativo": ["Semilla (X0)", "Multiplicador (k)", "Módulo (g)", "Mínimo", "Máximo"],
 }
+
+NO_FILE_OPTIONS = {"aditivo", "multiplicativo", "uniforme_aditivo", "uniforme_multiplicativo"}
 
 
 def select_file():
@@ -57,7 +67,7 @@ def update_fields(*args):
         e.pack()
         entries[name] = e
 
-    if option in ("aditivo", "multiplicativo"):
+    if option in NO_FILE_OPTIONS:
         load_btn.config(state="disabled")
     else:
         load_btn.config(state="normal")
@@ -79,7 +89,7 @@ def validate(*args):
 
     inputs_ok = file_path != "" or all_fields_filled
 
-    if option in ("aditivo", "multiplicativo"):
+    if option in NO_FILE_OPTIONS:
         inputs_ok = all_fields_filled
 
     if amount_ok and inputs_ok:
@@ -91,7 +101,7 @@ def validate(*args):
 def show_results_window(simulations, algorithm_name, amount):
     win = tk.Toplevel()
     win.title("Resultados")
-    win.geometry("350x550")
+    win.geometry("350x750")
 
     canvas = tk.Canvas(win)
     scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas.yview)
@@ -125,7 +135,7 @@ def show_results_window(simulations, algorithm_name, amount):
         lb_scroll.pack(side="right", fill="y")
 
         listbox = tk.Listbox(listbox_frame, yscrollcommand=lb_scroll.set,
-                             font=("Courier", 10), height=6)
+                             font=("Courier", 10), height=10)
         listbox.pack(fill="x")
         lb_scroll.config(command=listbox.yview)
 
@@ -149,54 +159,139 @@ def run():
             if file_path:
                 seeds = import_mid_square_seeds(file_path)
             else:
-                seeds = [int(entries["Semilla"].get())]
+                seeds = [int(entries["Semilla (X0)"].get())]
 
             for seed in seeds:
                 numbers = mid_square(seed, amount)
                 simulations.append({
-                    "params": {"Semilla": seed},
+                    "params": {"Semilla (X0)": seed},
                     "numbers": numbers
                 })
 
         case "congruencial":
             algorithm_name = "Congruencial"
             if file_path:
-                params_list = import_congruent_seeds(file_path)
+                params_list = import_parameter_seeds(file_path)
             else:
                 params_list = [{
-                    "xo": entries["Semilla"].get(),
-                    "k": entries["Multiplicador"].get(),
-                    "c": entries["Incremento"].get(),
-                    "g": entries["Módulo"].get()
+                    "xo": entries["Semilla (X0)"].get(),
+                    "k": entries["Multiplicador (k)"].get(),
+                    "c": entries["Incremento (c)"].get(),
+                    "g": entries["Módulo (g)"].get()
                 }]
 
             for p in params_list:
                 numbers = congruence(int(p["xo"]), int(p["k"]), int(p["c"]), int(p["g"]), amount)
                 simulations.append({
-                    "params": {"Semilla": p["xo"], "Multiplicador": p["k"],
-                               "Incremento": p["c"], "Módulo": p["g"]},
+                    "params": {"Semilla (X0)": p["xo"], "Multiplicador (k)": p["k"],
+                               "Incremento (c)": p["c"], "Módulo (g)": p["g"]},
                     "numbers": numbers
                 })
 
         case "aditivo":
             algorithm_name = "Congruencial aditivo"
-            seed = int(entries["Semilla"].get())
-            increment = int(entries["Incremento"].get())
-            modulus = int(entries["Módulo"].get())
+            seed = int(entries["Semilla (X0)"].get())
+            increment = int(entries["Incremento (c)"].get())
+            modulus = int(entries["Módulo (g)"].get())
             numbers = congruence_additive(seed, increment, modulus, amount)
             simulations.append({
-                "params": {"Semilla": seed, "Incremento": increment, "Módulo": modulus},
+                "params": {"Semilla (X0)": seed, "Incremento (c)": increment, "Módulo (g)": modulus},
                 "numbers": numbers
             })
 
         case "multiplicativo":
             algorithm_name = "Congruencial multiplicativo"
-            seed = int(entries["Semilla"].get())
-            multiplier = int(entries["Multiplicador"].get())
-            modulus = int(entries["Módulo"].get())
+            seed = int(entries["Semilla (X0)"].get())
+            multiplier = int(entries["Multiplicador (k)"].get())
+            modulus = int(entries["Módulo (g)"].get())
             numbers = congruence_multiplicative(seed, multiplier, modulus, amount)
             simulations.append({
-                "params": {"Semilla": seed, "Multiplicador": multiplier, "Módulo": modulus},
+                "params": {"Semilla (X0)": seed, "Multiplicador (k)": multiplier, "Módulo (g)": modulus},
+                "numbers": numbers
+            })
+
+        case "uniforme_cuadrados":
+            algorithm_name = "Uniforme – Cuadrados medios"
+
+            if file_path:
+                params_list = import_parameter_seeds(file_path)
+            else:
+                params_list = [{
+                    "seed": entries["Semilla (X0)"].get(),
+                    "min": entries["Mínimo"].get(),
+                    "max": entries["Máximo"].get(),
+                }]
+
+            for p in params_list:
+                seed = int(p["seed"])
+                range_min = float(p["min"])
+                range_max = float(p["max"])
+                numbers = uniform_mid_square(seed, range_min, range_max, amount)
+                simulations.append({
+                    "params": {"Semilla (X0)": seed, "Mínimo": range_min, "Máximo": range_max},
+                    "numbers": numbers
+                })
+
+        case "uniforme_congruencial":
+            algorithm_name = "Uniforme – Congruencial"
+
+            if file_path:
+                params_list = import_parameter_seeds(file_path)
+            else:
+                params_list = [{
+                    "xo": entries["Semilla (X0)"].get(),
+                    "k": entries["Multiplicador (k)"].get(),
+                    "c": entries["Incremento (c)"].get(),
+                    "g": entries["Módulo (g)"].get(),
+                    "min": entries["Mínimo"].get(),
+                    "max": entries["Máximo"].get(),
+                }]
+
+            for p in params_list:
+                range_min = float(p["min"])
+                range_max = float(p["max"])
+                numbers = uniform_distribution_congruence(
+                    int(p["xo"]), int(p["k"]), int(p["c"]), int(p["g"]),
+                    range_min, range_max, amount
+                )
+                simulations.append({
+                    "params": {
+                        "Semilla (X0)": p["xo"], "Multiplicador (k)": p["k"],
+                        "Incremento (c)": p["c"], "Módulo (g)": p["g"],
+                        "Mínimo": range_min, "Máximo": range_max,
+                    },
+                    "numbers": numbers
+                })
+
+        case "uniforme_aditivo":
+            algorithm_name = "Uniforme – Congruencial aditivo"
+            seed = int(entries["Semilla (X0)"].get())
+            increment = int(entries["Incremento (c)"].get())
+            modulus = int(entries["Módulo (g)"].get())
+            range_min = float(entries["Mínimo"].get())
+            range_max = float(entries["Máximo"].get())
+            numbers = uniform_distribution_additive(seed, increment, modulus, range_min, range_max, amount)
+            simulations.append({
+                "params": {
+                    "Semilla (X0)": seed, "Incremento (c)": increment, "Módulo (g)": modulus,
+                    "Mínimo": range_min, "Máximo": range_max,
+                },
+                "numbers": numbers
+            })
+
+        case "uniforme_multiplicativo":
+            algorithm_name = "Uniforme – Congruencial multiplicativo"
+            seed = int(entries["Semilla (X0)"].get())
+            multiplier = int(entries["Multiplicador (k)"].get())
+            modulus = int(entries["Módulo (g)"].get())
+            range_min = float(entries["Mínimo"].get())
+            range_max = float(entries["Máximo"].get())
+            numbers = uniform_distribution_multiplicative(seed, multiplier, modulus, range_min, range_max, amount)
+            simulations.append({
+                "params": {
+                    "Semilla (X0)": seed, "Multiplicador (k)": multiplier, "Módulo (g)": modulus,
+                    "Mínimo": range_min, "Máximo": range_max,
+                },
                 "numbers": numbers
             })
 
@@ -208,24 +303,43 @@ def main():
 
     root = tk.Tk()
     root.title("Generadores de números pseudoaleatorios")
-    root.geometry("500x300")
+    root.geometry("780x380")
 
     entries = {}
 
-    tk.Label(root, text="Seleccione un algoritmo:").pack(pady=(10, 0))
+    selector_frame = tk.Frame(root)
+    selector_frame.pack(pady=(10, 0), anchor="w", padx=20)
+
     var_option = tk.StringVar(value="cuadrados")
-    options = [
-        ("Cuadrados medios", "cuadrados"),
-        ("Congruencial", "congruencial"),
-        ("Congruencial aditivo", "aditivo"),
-        ("Congruencial multiplicativo", "multiplicativo"),
+
+    base_frame = tk.LabelFrame(selector_frame, text="Generadores base", padx=8, pady=4)
+    base_frame.pack(side="left", padx=(0, 15), anchor="n")
+
+    base_options = [
+        ("Cuadrados medios",          "cuadrados"),
+        ("Congruencial",              "congruencial"),
+        ("Congruencial aditivo",      "aditivo"),
+        ("Congruencial multiplicativo","multiplicativo"),
     ]
-    for label, value in options:
-        tk.Radiobutton(root, text=label, variable=var_option,
-                       value=value, command=update_fields).pack(anchor="w", padx=20)
+    for label, value in base_options:
+        tk.Radiobutton(base_frame, text=label, variable=var_option,
+                       value=value, command=update_fields).pack(anchor="w")
+
+    uni_frame = tk.LabelFrame(selector_frame, text="Distribución uniforme", padx=8, pady=4)
+    uni_frame.pack(side="left", anchor="n")
+
+    uni_options = [
+        ("Cuadrados medios",          "uniforme_cuadrados"),
+        ("Congruencial",              "uniforme_congruencial"),
+        ("Congruencial aditivo",      "uniforme_aditivo"),
+        ("Congruencial multiplicativo","uniforme_multiplicativo"),
+    ]
+    for label, value in uni_options:
+        tk.Radiobutton(uni_frame, text=label, variable=var_option,
+                       value=value, command=update_fields).pack(anchor="w")
 
     amount_frame = tk.Frame(root)
-    amount_frame.pack(pady=(5, 0))
+    amount_frame.pack(pady=(8, 0))
     tk.Label(amount_frame, text="Cantidad de números a generar:").pack(side="left", padx=(0, 5))
     amount_entry = tk.Entry(amount_frame, width=6)
     amount_entry.pack(side="left")
@@ -235,7 +349,7 @@ def main():
     fields_frame.pack(pady=10)
 
     buttons_frame = tk.Frame(root)
-    buttons_frame.pack(pady=10)
+    buttons_frame.pack(pady=6)
 
     file_entry = tk.Entry(root)
     file_entry.pack_forget()
