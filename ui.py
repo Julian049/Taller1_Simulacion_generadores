@@ -302,14 +302,18 @@ def run():
         case "normal_cuadrados":
             algorithm_name = "Normal – Cuadrados medios (Box-Muller)"
             if file_path:
-                seeds = import_mid_square_seeds(file_path)
+                params_list = import_parameter_seeds(file_path)
             else:
-                seeds = [int(entries["Semilla (X0)"].get())]
+                params_list = [{
+                    "seed":    entries["Semilla (X0)"].get(),
+                    "mean":    entries["Media (μ)"].get(),
+                    "std_dev": entries["Desv. estándar (σ)"].get(),
+                }]
 
-            mean = float(entries["Media (μ)"].get())
-            std_dev = float(entries["Desv. estándar (σ)"].get())
-
-            for seed in seeds:
+            for p in params_list:
+                seed = int(p["seed"])
+                mean = float(p["mean"])
+                std_dev = float(p["std_dev"])
                 numbers = normal_distribution_mid_square(seed, mean, std_dev, amount)
                 simulations.append({
                     "params": {
@@ -326,16 +330,17 @@ def run():
                 params_list = import_parameter_seeds(file_path)
             else:
                 params_list = [{
-                    "xo": entries["Semilla (X0)"].get(),
-                    "k": entries["Multiplicador (k)"].get(),
-                    "c": entries["Incremento (c)"].get(),
-                    "g": entries["Módulo (g)"].get(),
+                    "xo":      entries["Semilla (X0)"].get(),
+                    "k":       entries["Multiplicador (k)"].get(),
+                    "c":       entries["Incremento (c)"].get(),
+                    "g":       entries["Módulo (g)"].get(),
+                    "mean":    entries["Media (μ)"].get(),
+                    "std_dev": entries["Desv. estándar (σ)"].get(),
                 }]
 
-            mean = float(entries["Media (μ)"].get())
-            std_dev = float(entries["Desv. estándar (σ)"].get())
-
             for p in params_list:
+                mean = float(p["mean"])
+                std_dev = float(p["std_dev"])
                 numbers = normal_distribution_congruence(
                     int(p["xo"]), int(p["k"]), int(p["c"]), int(p["g"]),
                     mean, std_dev, amount

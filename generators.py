@@ -259,30 +259,134 @@ def uniform_mid_square(seed, range_min, range_max, number_ri):
 
 
 def box_muller(list_ri):
+    """
+    Transforma una lista de números pseudoaleatorios uniformes en pares de valores
+    con distribución normal estándar usando el método de Box-Muller.
+
+    Aplica la transformación:
+        z0 = sqrt(-2 * ln(r_i))   * cos(2π * r_i)
+        z1 = sqrt(-2 * ln(r_i+1)) * sin(2π * r_i)
+
+    Args:
+        list_ri (list[float]): Lista de números pseudoaleatorios en el rango (0, 1].
+                               Su longitud debe ser par.
+
+    Returns:
+        list[list[float]]: Lista de pares [z0, z1], cada uno con distribución
+                           normal estándar N(0, 1).
+
+    Raises:
+        Exception: Si la longitud de list_ri no es par.
+        Exception: Si algún valor de list_ri es menor o igual a 0, ya que
+                   log(0) no está definido.
+        Exception: Si algún valor de list_ri es mayor que 1, ya que los Ri
+                   deben pertenecer al intervalo (0, 1].
+    """
     if len(list_ri) % 2 != 0:
         raise Exception("El tamaño de la lista de valores debe ser par.")
 
+    for i, ri in enumerate(list_ri):
+        if ri <= 0:
+            raise Exception(
+                f"El valor list_ri[{i}]={ri} debe ser mayor que 0. "
+                "El logaritmo de 0 o valores negativos no está definido."
+            )
+        if ri > 1:
+            raise Exception(
+                f"El valor list_ri[{i}]={ri} debe estar en el intervalo (0, 1]. "
+                "Los números pseudoaleatorios Ri deben pertenecer a ese rango."
+            )
+
     box_muller_list = []
     for i in range(0, len(list_ri) - 1, 2):
-        z0 = math.sqrt(-2 * math.log(list_ri[i])) * math.cos(2 * math.pi * list_ri[i])
-        z1 = math.sqrt(-2 * math.log(list_ri[i + 1])) * math.sin(2 * math.pi * list_ri[i])
+        z0 = math.sqrt(-2 * math.log(list_ri[i])) * math.cos(2 * math.pi * list_ri[i + 1])
+        z1 = math.sqrt(-2 * math.log(list_ri[i])) * math.sin(2 * math.pi * list_ri[i + 1])
         box_muller_list.append([z0, z1])
     return box_muller_list
 
 
 def normal_distribution(list_ri, mean, std_dev):
+    """
+    Genera valores con distribución normal a partir de números pseudoaleatorios
+    uniformes aplicando la transformación de Box-Muller.
+
+    Para cada par [z0, z1] obtenido de Box-Muller, transforma cada zi mediante:
+        ni = mean + zi * std_dev
+
+    Args:
+        list_ri (list[float]): Lista de números pseudoaleatorios en el rango (0, 1].
+                               Su longitud debe ser par.
+        mean (float): Media (μ) de la distribución normal deseada.
+        std_dev (float): Desviación estándar (σ) de la distribución normal deseada.
+                         Debe ser mayor que 0.
+
+    Returns:
+        list[float]: Lista de valores con distribución normal N(mean, std_dev²).
+
+    Raises:
+        Exception: Si std_dev es menor o igual a 0.
+        Exception: Propaga las excepciones de box_muller si list_ri no es válida.
+    """
+    if std_dev <= 0:
+        raise Exception(
+            f"La desviación estándar std_dev={std_dev} debe ser mayor que 0."
+        )
+
     list_zi = box_muller(list_ri)
     list_ni = []
-    for i in list_zi:
-        x = mean + (i * std_dev)
-        list_ni.append(x)
+    for pair in list_zi:
+        for zi in pair:
+            ni = mean + (zi * std_dev)
+            list_ni.append(ni)
     return list_ni
 
 
 def normal_distribution_congruence(xo, k, c, g, mean, std_dev, number_ni):
+    """
+    Genera valores con distribución normal usando el método de congruencia lineal
+    mixta como generador de números pseudoaleatorios base.
+
+    Args:
+        xo (int): Valor semilla inicial. Debe estar en el rango [0, m].
+        k (int): Parámetro para calcular el multiplicador a = 1 + 2k.
+        c (int): Incremento (constante aditiva). Debe estar en el rango (0, m].
+        g (int): Exponente para calcular el módulo m = 2^g. Debe ser mayor que 0.
+        mean (float): Media (μ) de la distribución normal deseada.
+        std_dev (float): Desviación estándar (σ) de la distribución normal deseada.
+                         Debe ser mayor que 0.
+        number_ni (int): Cantidad de valores a generar. Debe ser un número par.
+
+    Returns:
+        list[float]: Lista de valores con distribución normal N(mean, std_dev²).
+
+    Raises:
+        Exception: Propaga las excepciones de congruence si los parámetros no son válidos.
+        Exception: Propaga las excepciones de normal_distribution si mean o std_dev
+                   no son válidos, o si number_ni no es par.
+    """
     list_ri = congruence(xo, k, c, g, number_ni)
     return normal_distribution(list_ri, mean, std_dev)
 
+
 def normal_distribution_mid_square(seed, mean, std_dev, number_ni):
+    """
+    Genera valores con distribución normal usando el método de cuadrados medios
+    como generador de números pseudoaleatorios base.
+
+    Args:
+        seed (int): Semilla inicial (debe tener al menos 3 cifras).
+        mean (float): Media (μ) de la distribución normal deseada.
+        std_dev (float): Desviación estándar (σ) de la distribución normal deseada.
+                         Debe ser mayor que 0.
+        number_ni (int): Cantidad de valores a generar. Debe ser un número par.
+
+    Returns:
+        list[float]: Lista de valores con distribución normal N(mean, std_dev²).
+
+    Raises:
+        Exception: Si la semilla tiene menos de 3 cifras.
+        Exception: Propaga las excepciones de normal_distribution si mean o std_dev
+                   no son válidos, o si number_ni no es par.
+    """
     list_ri = mid_square(seed, number_ni)
     return normal_distribution(list_ri, mean, std_dev)
