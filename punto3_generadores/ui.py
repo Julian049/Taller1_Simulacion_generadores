@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
-from generators import (
+from punto3_generadores.generators import (
     mid_square, congruence, congruence_additive, congruence_multiplicative,
     uniform_mid_square, uniform_distribution_congruence,
     uniform_distribution_additive, uniform_distribution_multiplicative,
