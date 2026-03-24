@@ -1,3 +1,6 @@
+import math
+
+
 def mid_square(seed, number_ri):
     """
     Genera números pseudoaleatorios usando el método de cuadrados medios.
@@ -253,3 +256,33 @@ def uniform_mid_square(seed, range_min, range_max, number_ri):
     list_ni = general_uniform(list_ri, range_min, range_max)
 
     return list_ni
+
+
+def box_muller(list_ri):
+    if len(list_ri) % 2 != 0:
+        raise Exception("El tamaño de la lista de valores debe ser par.")
+
+    box_muller_list = []
+    for i in range(0, len(list_ri) - 1, 2):
+        z0 = math.sqrt(-2 * math.log(list_ri[i])) * math.cos(2 * math.pi * list_ri[i])
+        z1 = math.sqrt(-2 * math.log(list_ri[i + 1])) * math.sin(2 * math.pi * list_ri[i])
+        box_muller_list.append([z0, z1])
+    return box_muller_list
+
+
+def normal_distribution(list_ri, mean, std_dev):
+    list_zi = box_muller(list_ri)
+    list_ni = []
+    for i in list_zi:
+        x = mean + (i * std_dev)
+        list_ni.append(x)
+    return list_ni
+
+
+def normal_distribution_congruence(xo, k, c, g, mean, std_dev, number_ni):
+    list_ri = congruence(xo, k, c, g, number_ni)
+    return normal_distribution(list_ri, mean, std_dev)
+
+def normal_distribution_mid_square(seed, mean, std_dev, number_ni):
+    list_ri = mid_square(seed, number_ni)
+    return normal_distribution(list_ri, mean, std_dev)

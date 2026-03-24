@@ -4,6 +4,7 @@ from generators import (
     mid_square, congruence, congruence_additive, congruence_multiplicative,
     uniform_mid_square, uniform_distribution_congruence,
     uniform_distribution_additive, uniform_distribution_multiplicative,
+    normal_distribution_congruence, normal_distribution_mid_square,
 )
 from import_seeds import import_parameter_seeds, import_mid_square_seeds
 
@@ -16,6 +17,9 @@ FIELDS = {
     "uniforme_congruencial":["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
     "uniforme_aditivo":     ["Semilla (X0)", "Incremento (c)", "Módulo (g)", "Mínimo", "Máximo"],
     "uniforme_multiplicativo": ["Semilla (X0)", "Multiplicador (k)", "Módulo (g)", "Mínimo", "Máximo"],
+    # Distribución normal
+    "normal_cuadrados":     ["Semilla (X0)", "Media (μ)", "Desv. estándar (σ)"],
+    "normal_congruencial":  ["Semilla (X0)", "Multiplicador (k)", "Incremento (c)", "Módulo (g)", "Media (μ)", "Desv. estándar (σ)"],
 }
 
 NO_FILE_OPTIONS = {"aditivo", "multiplicativo", "uniforme_aditivo", "uniforme_multiplicativo"}
@@ -295,6 +299,56 @@ def run():
                 "numbers": numbers
             })
 
+        case "normal_cuadrados":
+            algorithm_name = "Normal – Cuadrados medios (Box-Muller)"
+            if file_path:
+                seeds = import_mid_square_seeds(file_path)
+            else:
+                seeds = [int(entries["Semilla (X0)"].get())]
+
+            mean = float(entries["Media (μ)"].get())
+            std_dev = float(entries["Desv. estándar (σ)"].get())
+
+            for seed in seeds:
+                numbers = normal_distribution_mid_square(seed, mean, std_dev, amount)
+                simulations.append({
+                    "params": {
+                        "Semilla (X0)": seed,
+                        "Media (μ)": mean,
+                        "Desv. estándar (σ)": std_dev,
+                    },
+                    "numbers": numbers
+                })
+
+        case "normal_congruencial":
+            algorithm_name = "Normal – Congruencial (Box-Muller)"
+            if file_path:
+                params_list = import_parameter_seeds(file_path)
+            else:
+                params_list = [{
+                    "xo": entries["Semilla (X0)"].get(),
+                    "k": entries["Multiplicador (k)"].get(),
+                    "c": entries["Incremento (c)"].get(),
+                    "g": entries["Módulo (g)"].get(),
+                }]
+
+            mean = float(entries["Media (μ)"].get())
+            std_dev = float(entries["Desv. estándar (σ)"].get())
+
+            for p in params_list:
+                numbers = normal_distribution_congruence(
+                    int(p["xo"]), int(p["k"]), int(p["c"]), int(p["g"]),
+                    mean, std_dev, amount
+                )
+                simulations.append({
+                    "params": {
+                        "Semilla (X0)": p["xo"], "Multiplicador (k)": p["k"],
+                        "Incremento (c)": p["c"], "Módulo (g)": p["g"],
+                        "Media (μ)": mean, "Desv. estándar (σ)": std_dev,
+                    },
+                    "numbers": numbers
+                })
+
     show_results_window(simulations, algorithm_name, amount)
 
 
@@ -303,7 +357,7 @@ def main():
 
     root = tk.Tk()
     root.title("Generadores de números pseudoaleatorios")
-    root.geometry("780x380")
+    root.geometry("980x380")
 
     entries = {}
 
@@ -312,32 +366,47 @@ def main():
 
     var_option = tk.StringVar(value="cuadrados")
 
+    # ── Generadores base ──────────────────────────────────────────────────────
     base_frame = tk.LabelFrame(selector_frame, text="Generadores base", padx=8, pady=4)
     base_frame.pack(side="left", padx=(0, 15), anchor="n")
 
     base_options = [
-        ("Cuadrados medios",          "cuadrados"),
-        ("Congruencial",              "congruencial"),
-        ("Congruencial aditivo",      "aditivo"),
+        ("Cuadrados medios",           "cuadrados"),
+        ("Congruencial",               "congruencial"),
+        ("Congruencial aditivo",       "aditivo"),
         ("Congruencial multiplicativo","multiplicativo"),
     ]
     for label, value in base_options:
         tk.Radiobutton(base_frame, text=label, variable=var_option,
                        value=value, command=update_fields).pack(anchor="w")
 
+    # ── Distribución uniforme ─────────────────────────────────────────────────
     uni_frame = tk.LabelFrame(selector_frame, text="Distribución uniforme", padx=8, pady=4)
-    uni_frame.pack(side="left", anchor="n")
+    uni_frame.pack(side="left", padx=(0, 15), anchor="n")
 
     uni_options = [
-        ("Cuadrados medios",          "uniforme_cuadrados"),
-        ("Congruencial",              "uniforme_congruencial"),
-        ("Congruencial aditivo",      "uniforme_aditivo"),
+        ("Cuadrados medios",           "uniforme_cuadrados"),
+        ("Congruencial",               "uniforme_congruencial"),
+        ("Congruencial aditivo",       "uniforme_aditivo"),
         ("Congruencial multiplicativo","uniforme_multiplicativo"),
     ]
     for label, value in uni_options:
         tk.Radiobutton(uni_frame, text=label, variable=var_option,
                        value=value, command=update_fields).pack(anchor="w")
 
+    # ── Distribución normal (Box-Muller) ──────────────────────────────────────
+    norm_frame = tk.LabelFrame(selector_frame, text="Distribución normal", padx=8, pady=4)
+    norm_frame.pack(side="left", anchor="n")
+
+    norm_options = [
+        ("Cuadrados medios", "normal_cuadrados"),
+        ("Congruencial",     "normal_congruencial"),
+    ]
+    for label, value in norm_options:
+        tk.Radiobutton(norm_frame, text=label, variable=var_option,
+                       value=value, command=update_fields).pack(anchor="w")
+
+    # ── Cantidad ──────────────────────────────────────────────────────────────
     amount_frame = tk.Frame(root)
     amount_frame.pack(pady=(8, 0))
     tk.Label(amount_frame, text="Cantidad de números a generar:").pack(side="left", padx=(0, 5))
