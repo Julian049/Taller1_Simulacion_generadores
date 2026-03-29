@@ -1,5 +1,5 @@
 import math
-
+import sys
 
 def mid_square(seed, number_ri):
     """
@@ -264,11 +264,11 @@ def box_muller(list_ri):
     con distribución normal estándar usando el método de Box-Muller.
 
     Aplica la transformación:
-        z0 = sqrt(-2 * ln(r_i))   * cos(2π * r_i)
-        z1 = sqrt(-2 * ln(r_i+1)) * sin(2π * r_i)
+        z0 = sqrt(-2 * ln(r_i))   * cos(2π * r_{i+1})
+        z1 = sqrt(-2 * ln(r_i))   * sin(2π * r_{i+1})
 
     Args:
-        list_ri (list[float]): Lista de números pseudoaleatorios en el rango (0, 1].
+        list_ri (list[float]): Lista de números pseudoaleatorios en el rango [0, 1].
                                Su longitud debe ser par.
 
     Returns:
@@ -277,30 +277,32 @@ def box_muller(list_ri):
 
     Raises:
         Exception: Si la longitud de list_ri no es par.
-        Exception: Si algún valor de list_ri es menor o igual a 0, ya que
-                   log(0) no está definido.
-        Exception: Si algún valor de list_ri es mayor que 1, ya que los Ri
-                   deben pertenecer al intervalo (0, 1].
+        Exception: Si algún valor de list_ri es negativo.
+        Exception: Si algún valor de list_ri es mayor que 1.
     """
     if len(list_ri) % 2 != 0:
         raise Exception("El tamaño de la lista de valores debe ser par.")
 
+    _EPSILON = sys.float_info.min
+
+    sanitized = []
     for i, ri in enumerate(list_ri):
-        if ri <= 0:
+        if ri < 0:
             raise Exception(
-                f"El valor list_ri[{i}]={ri} debe ser mayor que 0. "
-                "El logaritmo de 0 o valores negativos no está definido."
+                f"El valor list_ri[{i}]={ri} es negativo. "
+                "Los Ri deben pertenecer al intervalo [0, 1]."
             )
         if ri > 1:
             raise Exception(
-                f"El valor list_ri[{i}]={ri} debe estar en el intervalo (0, 1]. "
+                f"El valor list_ri[{i}]={ri} debe estar en el intervalo [0, 1]. "
                 "Los números pseudoaleatorios Ri deben pertenecer a ese rango."
             )
+        sanitized.append(ri if ri > 0 else _EPSILON)
 
     box_muller_list = []
-    for i in range(0, len(list_ri) - 1, 2):
-        z0 = math.sqrt(-2 * math.log(list_ri[i])) * math.cos(2 * math.pi * list_ri[i + 1])
-        z1 = math.sqrt(-2 * math.log(list_ri[i])) * math.sin(2 * math.pi * list_ri[i + 1])
+    for i in range(0, len(sanitized) - 1, 2):
+        z0 = math.sqrt(-2 * math.log(sanitized[i])) * math.cos(2 * math.pi * sanitized[i + 1])
+        z1 = math.sqrt(-2 * math.log(sanitized[i])) * math.sin(2 * math.pi * sanitized[i + 1])
         box_muller_list.append([z0, z1])
     return box_muller_list
 

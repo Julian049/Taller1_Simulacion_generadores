@@ -30,7 +30,7 @@ except ImportError:
 from generators import (
     mid_square, congruence, congruence_additive,
     congruence_multiplicative, general_uniform,
-    normal_distribution_congruence
+    normal_distribution_congruence, normal_distribution_mid_square
 )
 from import_seeds import import_parameter_seeds, import_mid_square_seeds
 
@@ -131,9 +131,11 @@ class App(tk.Tk):
         self.minsize(1100, 700)
         self.configure(bg=BG)
 
-        self._secuencia  = []
-        self._resultados = {}
-        self._nombre_gen = ""
+        self._secuencia        = []
+        self._secuencias_gen   = []
+        self._resultados       = {}
+        self._resultados_por_seq = []
+        self._nombre_gen       = ""
         self._file_path  = tk.StringVar()
         self._entries    = {}
 
@@ -186,12 +188,12 @@ class App(tk.Tk):
 
         self._gen_var = tk.StringVar(value="congruencial")
         for txt, val in [
-            ("Cuadrados Medios",             "cuadrados"),
-            ("Congruencial Mixto",           "congruencial"),
-            ("Congruencial Aditivo",         "aditivo"),
-            ("Congruencial Multiplicativo",  "multiplicativo"),
-            ("Distribución Uniforme",        "uniforme"),
-            ("Distribución Normal",          "normal"),
+            ("Congruencial Mixto",              "congruencial"),
+            ("Cuadrados Medios",                "cuadrados"),
+            ("Uniforme Congruencial",           "uniforme_cong"),
+            ("Uniforme Cuadrados Medios",       "uniforme_ms"),
+            ("Normal Congruencial",             "normal_cong"),
+            ("Normal Cuadrados Medios",         "normal_ms"),
         ]:
             tk.Radiobutton(gen_f, text=txt, variable=self._gen_var, value=val,
                            command=self._update_params,
@@ -213,7 +215,7 @@ class App(tk.Tk):
         section_label(p, "③ Cantidad de números (N)")
         qf = tk.Frame(p, bg=SIDEBAR)
         qf.pack(fill="x", padx=16, pady=(4, 8))
-        self._n_entry = make_entry(qf, "1000", width=14)
+        self._n_entry = make_entry(qf, "300", width=14)
         self._n_entry.pack(anchor="w")
 
         sep(p)
@@ -290,6 +292,16 @@ class App(tk.Tk):
         self._nb = ttk.Notebook(parent, style="T.TNotebook")
         self._nb.pack(fill="both", expand=True)
 
+        # Pestaña Generador (nueva — primera)
+        self._tab_gen = tk.Frame(self._nb, bg=BG)
+        self._nb.add(self._tab_gen, text="  🎲 Generador  ")
+        self._gen_scroll = ScrollFrame(self._tab_gen, bg=BG)
+        self._gen_scroll.pack(fill="both", expand=True)
+        self._gen_inner = self._gen_scroll.inner
+        tk.Label(self._gen_inner,
+                 text="Ejecuta una simulación para ver los resultados del generador.",
+                 bg=BG, fg=SUBTEXT, font=FONT_BODY).pack(pady=60)
+
         # Pestaña Resumen
         self._tab_res = tk.Frame(self._nb, bg=BG)
         self._nb.add(self._tab_res, text="  📊 Resumen  ")
@@ -365,19 +377,19 @@ class App(tk.Tk):
         self._entries.clear()
 
         defs = {
-            "cuadrados":     [("Semilla (X0)", "5678")],
-            "congruencial":  [("Semilla (X0)", "7"), ("Multiplicador k", "150"),
-                              ("Incremento c", "31"), ("Módulo g", "25")],
-            "aditivo":       [("Semilla (X0)", "5"), ("Incremento c", "15"),
-                              ("Módulo g", "25")],
-            "multiplicativo":[("Semilla (X0)", "3"), ("Multiplicador k", "200"),
-                              ("Módulo g", "25")],
-            "uniforme":      [("Semilla (X0)", "7"), ("Multiplicador k", "150"),
-                              ("Incremento c", "31"), ("Módulo g", "25"),
-                              ("Mínimo", "0"), ("Máximo", "1")],
-            "normal":        [("Semilla (X0)", "7"), ("Multiplicador k", "150"),
-                              ("Incremento c", "31"), ("Módulo g", "25"),
-                              ("Media (μ)", "0"), ("Desv. estándar (σ)", "1")],
+            "congruencial":  [("Semilla (X0)", "7"), ("Multiplicador k", "100"),
+                              ("Incremento c", "21"), ("Módulo g", "12")],
+            "cuadrados":     [("Semilla", "5678")],
+            "uniforme_cong": [("Semilla (X0)", "7"), ("Multiplicador k", "100"),
+                              ("Incremento c", "21"), ("Módulo g", "12"),
+                              ("Mínimo", "4"), ("Máximo", "100")],
+            "uniforme_ms":   [("Semilla", "5678"),
+                              ("Mínimo", "4"), ("Máximo", "100")],
+            "normal_cong":   [("Semilla (X0)", "7"), ("Multiplicador k", "100"),
+                              ("Incremento c", "21"), ("Módulo g", "12"),
+                              ("Media (μ)", "3.5"), ("Desv. estándar (σ)", "0.4")],
+            "normal_ms":     [("Semilla", "5678"),
+                              ("Media (μ)", "3.5"), ("Desv. estándar (σ)", "0.4")],
         }
         for label, default in defs.get(self._gen_var.get(), []):
             row = tk.Frame(self._params_container, bg=SIDEBAR)
@@ -394,12 +406,41 @@ class App(tk.Tk):
         for v in self._prueba_vars.values():
             v.set(estado)
 
+    # Columnas requeridas por generador
+    _CSV_COLS = {
+        "congruencial":  {"xo", "k", "c", "g"},
+        "cuadrados":     {"seed"},
+        "uniforme_cong": {"xo", "k", "c", "g", "min", "max"},
+        "uniforme_ms":   {"seed", "min", "max"},
+        "normal_cong":   {"xo", "k", "c", "g", "mean", "std_dev"},
+        "normal_ms":     {"seed", "mean", "std_dev"},
+    }
+
     def _load_file(self):
         path = filedialog.askopenfilename(
             filetypes=[("CSV / TXT", "*.csv *.txt"), ("Todos", "*.*")])
-        if path:
-            self._file_path.set(path)
-            self._file_lbl.config(text=f"📄 {os.path.basename(path)}", fg=GREEN)
+        if not path:
+            return
+        # Validar columnas del CSV contra el generador seleccionado
+        try:
+            import csv as _csv
+            with open(path, newline="", encoding="utf-8") as f:
+                cols = set(next(_csv.DictReader(f)).keys())
+            gen = self._gen_var.get()
+            required = self._CSV_COLS.get(gen, set())
+            missing = required - cols
+            if missing:
+                messagebox.showerror(
+                    "Archivo incompatible",
+                    "Requiere columnas: " + str(sorted(required)) +
+                    "\nTiene: " + str(sorted(cols)) +
+                    "\nFaltan: " + str(sorted(missing)))
+                return
+        except Exception as ve:
+            messagebox.showerror("Error al leer archivo", str(ve))
+            return
+        self._file_path.set(path)
+        self._file_lbl.config(text=f"📄 {os.path.basename(path)}", fg=GREEN)
 
     def _clear_file(self):
         self._file_path.set("")
@@ -421,169 +462,391 @@ class App(tk.Tk):
             e   = self._entries
             fp  = self._file_path.get()
 
-            if gen == "cuadrados":
-                if fp:
-                    seeds = import_mid_square_seeds(fp)
-                    seq = []
-                    for s in seeds: seq.extend(mid_square(int(s), n))
-                else:
-                    seq = mid_square(int(e["Semilla (X0)"].get()), n)
-                self._nombre_gen = "Cuadrados Medios"
+            # ── Construir lista de secuencias: [(etiqueta, seq), ...]
+            secuencias = []
 
-            elif gen == "congruencial":
+            # ── congruence.csv: xo, k, c, g
+            if gen == "congruencial":
+                self._nombre_gen = "Congruencial Mixto"
                 if fp:
                     params = import_parameter_seeds(fp)
-                    seq = []
                     for p in params:
-                        seq.extend(congruence(int(p["xo"]), int(p["k"]),
-                                              int(p["c"]), int(p["g"]), n))
+                        seq = congruence(int(p["xo"]), int(p["k"]),
+                                         int(p["c"]), int(p["g"]), n)
+                        secuencias.append(
+                            (f"xo={p['xo']} k={p['k']} c={p['c']} g={p['g']}", seq))
                 else:
                     seq = congruence(int(e["Semilla (X0)"].get()),
                                      int(e["Multiplicador k"].get()),
                                      int(e["Incremento c"].get()),
                                      int(e["Módulo g"].get()), n)
-                self._nombre_gen = "Congruencial Mixto"
+                    secuencias.append(("Secuencia", seq))
 
-            elif gen == "aditivo":
-                seq = congruence_additive(int(e["Semilla (X0)"].get()),
-                                          int(e["Incremento c"].get()),
-                                          int(e["Módulo g"].get()), n)
-                self._nombre_gen = "Congruencial Aditivo"
+            # ── mid_square.csv: seed
+            elif gen == "cuadrados":
+                self._nombre_gen = "Cuadrados Medios"
+                if fp:
+                    params = import_parameter_seeds(fp)
+                    for p in params:
+                        seq = mid_square(int(p["seed"]), n)
+                        secuencias.append((f"Semilla {p['seed']}", seq))
+                else:
+                    seq = mid_square(int(e["Semilla"].get()), n)
+                    secuencias.append(("Secuencia", seq))
 
-            elif gen == "multiplicativo":
-                seq = congruence_multiplicative(int(e["Semilla (X0)"].get()),
-                                                int(e["Multiplicador k"].get()),
-                                                int(e["Módulo g"].get()), n)
-                self._nombre_gen = "Congruencial Multiplicativo"
+            # ── uniform_congruence.csv: xo, k, c, g, min, max
+            elif gen == "uniforme_cong":
+                self._nombre_gen = "Uniforme Congruencial"
+                if fp:
+                    params = import_parameter_seeds(fp)
+                    for p in params:
+                        base = congruence(int(p["xo"]), int(p["k"]),
+                                          int(p["c"]), int(p["g"]), n)
+                        seq = general_uniform(base, float(p["min"]), float(p["max"]))
+                        secuencias.append(
+                            (f"xo={p['xo']} [{p['min']},{p['max']}]", seq))
+                else:
+                    base = congruence(int(e["Semilla (X0)"].get()),
+                                      int(e["Multiplicador k"].get()),
+                                      int(e["Incremento c"].get()),
+                                      int(e["Módulo g"].get()), n)
+                    seq = general_uniform(base, float(e["Mínimo"].get()),
+                                          float(e["Máximo"].get()))
+                    secuencias.append(("Secuencia", seq))
 
-            elif gen == "uniforme":
-                base = congruence(int(e["Semilla (X0)"].get()),
-                                  int(e["Multiplicador k"].get()),
-                                  int(e["Incremento c"].get()),
-                                  int(e["Módulo g"].get()), n)
-                seq = general_uniform(base, float(e["Mínimo"].get()),
-                                      float(e["Máximo"].get()))
-                self._nombre_gen = "Distribución Uniforme"
+            # ── uniform_mid_square.csv: seed, min, max
+            elif gen == "uniforme_ms":
+                self._nombre_gen = "Uniforme Cuadrados Medios"
+                if fp:
+                    params = import_parameter_seeds(fp)
+                    for p in params:
+                        base = mid_square(int(p["seed"]), n)
+                        seq = general_uniform(base, float(p["min"]), float(p["max"]))
+                        secuencias.append(
+                            (f"seed={p['seed']} [{p['min']},{p['max']}]", seq))
+                else:
+                    base = mid_square(int(e["Semilla"].get()), n)
+                    seq = general_uniform(base, float(e["Mínimo"].get()),
+                                          float(e["Máximo"].get()))
+                    secuencias.append(("Secuencia", seq))
 
-            elif gen == "normal":
+            # ── normal_congruence.csv: xo, k, c, g, mean, std_dev
+            elif gen == "normal_cong":
+                self._nombre_gen = "Normal Congruencial (Box-Muller)"
                 n_par = n if n % 2 == 0 else n + 1
-                seq_n = normal_distribution_congruence(
-                    int(e["Semilla (X0)"].get()),
-                    int(e["Multiplicador k"].get()),
-                    int(e["Incremento c"].get()),
-                    int(e["Módulo g"].get()),
-                    float(e["Media (μ)"].get()),
-                    float(e["Desv. estándar (σ)"].get()),
-                    n_par)[:n]
-                mn, mx = min(seq_n), max(seq_n)
-                seq = [(x-mn)/(mx-mn) for x in seq_n] if mx != mn else seq_n
-                self._nombre_gen = "Distribución Normal (Box-Muller)"
+                if fp:
+                    params = import_parameter_seeds(fp)
+                    for p in params:
+                        seq_n = normal_distribution_congruence(
+                            int(p["xo"]), int(p["k"]), int(p["c"]), int(p["g"]),
+                            float(p["mean"]), float(p["std_dev"]), n_par)[:n]
+                        mn, mx = min(seq_n), max(seq_n)
+                        seq = [(x-mn)/(mx-mn) for x in seq_n] if mx != mn else seq_n
+                        secuencias.append(
+                            (f"xo={p['xo']} μ={p['mean']} σ={p['std_dev']}", seq))
+                else:
+                    seq_n = normal_distribution_congruence(
+                        int(e["Semilla (X0)"].get()),
+                        int(e["Multiplicador k"].get()),
+                        int(e["Incremento c"].get()),
+                        int(e["Módulo g"].get()),
+                        float(e["Media (μ)"].get()),
+                        float(e["Desv. estándar (σ)"].get()),
+                        n_par)[:n]
+                    mn, mx = min(seq_n), max(seq_n)
+                    seq = [(x-mn)/(mx-mn) for x in seq_n] if mx != mn else seq_n
+                    secuencias.append(("Secuencia", seq))
 
-            self._secuencia = seq
-            self._status(f"✅ {len(seq):,} números generados. Ejecutando pruebas...", GREEN)
+            # ── normal_mid_square.csv: seed, mean, std_dev
+            elif gen == "normal_ms":
+                self._nombre_gen = "Normal Cuadrados Medios (Box-Muller)"
+                n_par = n if n % 2 == 0 else n + 1
+                if fp:
+                    params = import_parameter_seeds(fp)
+                    for p in params:
+                        seq_n = normal_distribution_mid_square(
+                            int(p["seed"]),
+                            float(p["mean"]), float(p["std_dev"]), n_par)[:n]
+                        mn, mx = min(seq_n), max(seq_n)
+                        seq = [(x-mn)/(mx-mn) for x in seq_n] if mx != mn else seq_n
+                        secuencias.append(
+                            (f"seed={p['seed']} μ={p['mean']} σ={p['std_dev']}", seq))
+                else:
+                    seq_n = normal_distribution_mid_square(
+                        int(e["Semilla"].get()),
+                        float(e["Media (μ)"].get()),
+                        float(e["Desv. estándar (σ)"].get()),
+                        n_par)[:n]
+                    mn, mx = min(seq_n), max(seq_n)
+                    seq = [(x-mn)/(mx-mn) for x in seq_n] if mx != mn else seq_n
+                    secuencias.append(("Secuencia", seq))
+
+            # ── Usar la primera secuencia para la pestaña Secuencia/Gráficos
+            self._secuencia = secuencias[0][1] if secuencias else []
+            self._secuencias_gen = secuencias  # todas las (lbl, seq) para la pestana generador
+            total_nums = sum(len(s) for _, s in secuencias)
+            self._status(
+                f"✅ {total_nums:,} números en {len(secuencias)} secuencia(s). "
+                f"Ejecutando pruebas...", GREEN)
             self.update()
 
-            resultados = {}
-            if self._prueba_vars["Medias"].get():
-                resultados["Medias"] = prueba_medias(seq)
-            if self._prueba_vars["Varianza"].get():
-                resultados["Varianza"] = prueba_varianza(seq)
-            if self._prueba_vars["Chi-Cuadrado"].get():
-                resultados["Chi-Cuadrado"] = prueba_chi_cuadrado(seq)
-            if self._prueba_vars["Kolmogorov-Smirnov"].get():
-                resultados["Kolmogorov-Smirnov"] = prueba_ks(seq)
-            if self._prueba_vars["Póker"].get():
-                resultados["Póker"] = prueba_poker(seq)
-            if self._prueba_vars["Rachas"].get():
-                resultados["Rachas"] = prueba_rachas(seq)
+            # ── Correr pruebas por cada secuencia
+            # _resultados_por_seq: lista de (etiqueta, dict_resultados)
+            self._resultados_por_seq = []
+            for lbl, seq in secuencias:
+                res = {}
+                if self._prueba_vars["Medias"].get():
+                    res["Medias"] = prueba_medias(seq)
+                if self._prueba_vars["Varianza"].get():
+                    res["Varianza"] = prueba_varianza(seq)
+                if self._prueba_vars["Chi-Cuadrado"].get():
+                    res["Chi-Cuadrado"] = prueba_chi_cuadrado(seq)
+                if self._prueba_vars["Kolmogorov-Smirnov"].get():
+                    res["Kolmogorov-Smirnov"] = prueba_ks(seq)
+                if self._prueba_vars["Póker"].get():
+                    res["Póker"] = prueba_poker(seq)
+                if self._prueba_vars["Rachas"].get():
+                    res["Rachas"] = prueba_rachas(seq)
+                self._resultados_por_seq.append((lbl, res))
 
-            self._resultados = resultados
+            # Mantener _resultados apuntando a la primera para compatibilidad con gráficos
+            self._resultados = self._resultados_por_seq[0][1] if self._resultados_por_seq else {}
             self.after(0, self._mostrar_resultados)
 
         except Exception as ex:
-            self.after(0, lambda: self._status(f"❌ Error: {ex}", RED))
+            import traceback
+            tb = traceback.format_exc()
+            def _show_err(msg=str(ex), detail=tb):
+                self._status(f"❌ Error: {msg}", RED)
+                from tkinter import messagebox
+                messagebox.showerror("Error al ejecutar", detail)
+            self.after(0, _show_err)
 
     # ──────────────────────────────────────────────────────
     def _mostrar_resultados(self):
-        # Resumen
         for w in self._res_inner.winfo_children():
             w.destroy()
 
-        aprobadas = sum(1 for r in self._resultados.values() if r["aprueba"])
-        total     = len(self._resultados)
-        color_tot = GREEN if aprobadas==total else (YELLOW if aprobadas>=total//2 else RED)
+        n_seqs = len(self._resultados_por_seq)
 
-        # Header
+        # Totales globales
+        total_aprobadas = sum(
+            sum(1 for r in res.values() if r["aprueba"])
+            for _, res in self._resultados_por_seq)
+        total_pruebas = sum(
+            len(res) for _, res in self._resultados_por_seq)
+        color_tot = GREEN if total_aprobadas == total_pruebas else (
+                    YELLOW if total_aprobadas >= total_pruebas // 2 else RED)
+
+        # Header global
         hdr = tk.Frame(self._res_inner, bg=BG)
         hdr.pack(fill="x", padx=20, pady=(16, 4))
         tk.Label(hdr, text=self._nombre_gen, bg=BG, fg=WHITE,
                  font=FONT_TITLE).pack(anchor="w")
-        tk.Label(hdr, text=f"N = {len(self._secuencia):,} números generados",
-                 bg=BG, fg=SUBTEXT, font=FONT_BODY).pack(anchor="w")
+        info = (f"{n_seqs} secuencia(s)  ·  N = {len(self._secuencia):,} por secuencia"
+                if n_seqs > 1 else
+                f"N = {len(self._secuencia):,} números generados")
+        tk.Label(hdr, text=info, bg=BG, fg=SUBTEXT, font=FONT_BODY).pack(anchor="w")
 
-        # Score
         sf = tk.Frame(self._res_inner, bg=BG)
         sf.pack(fill="x", padx=20, pady=(8, 4))
-        tk.Label(sf, text=f"{aprobadas}/{total} pruebas aprobadas",
+        tk.Label(sf, text=f"{total_aprobadas}/{total_pruebas} pruebas aprobadas (total)",
                  bg=BG, fg=color_tot,
                  font=("Segoe UI", 14, "bold")).pack(anchor="w")
 
-        # Barra de progreso
         bar_bg = tk.Frame(self._res_inner, bg=CARD, height=8)
         bar_bg.pack(fill="x", padx=20, pady=(0, 16))
         bar_bg.pack_propagate(False)
-        if total > 0:
+        if total_pruebas > 0:
             tk.Frame(bar_bg, bg=color_tot, height=8).place(
-                relwidth=aprobadas/total, relheight=1)
+                relwidth=total_aprobadas / total_pruebas, relheight=1)
 
         tk.Frame(self._res_inner, bg=BORDER, height=1).pack(
-            fill="x", padx=20, pady=(0, 16))
+            fill="x", padx=20, pady=(0, 8))
 
-        # Tarjetas
-        grid = tk.Frame(self._res_inner, bg=BG)
-        grid.pack(fill="x", padx=16)
+        # Una sección por cada secuencia
+        for seq_idx, (lbl, resultados) in enumerate(self._resultados_por_seq):
+            aprobadas = sum(1 for r in resultados.values() if r["aprueba"])
+            total     = len(resultados)
+            c_sec = GREEN if aprobadas == total else (
+                    YELLOW if aprobadas >= total // 2 else RED)
 
-        for i, (nombre, res) in enumerate(self._resultados.items()):
-            col = i % 3; row = i // 3
-            grid.columnconfigure(col, weight=1)
+            # Encabezado de la secuencia
+            sec_hdr = tk.Frame(self._res_inner, bg=CARD2, padx=16, pady=8)
+            sec_hdr.pack(fill="x", padx=16, pady=(8, 2))
+            tk.Label(sec_hdr,
+                     text=f"{'📄 ' if n_seqs > 1 else ''}Secuencia {seq_idx+1}  —  {lbl}",
+                     bg=CARD2, fg=ACCENT,
+                     font=("Segoe UI", 10, "bold")).pack(side="left")
+            tk.Label(sec_hdr,
+                     text=f"{aprobadas}/{total} aprobadas",
+                     bg=CARD2, fg=c_sec,
+                     font=("Segoe UI", 10, "bold")).pack(side="right")
 
-            c_borde = GREEN if res["aprueba"] else RED
-            estado  = "✅  APRUEBA" if res["aprueba"] else "❌  FALLA"
+            # Tarjetas de pruebas
+            grid = tk.Frame(self._res_inner, bg=BG)
+            grid.pack(fill="x", padx=16, pady=(2, 4))
 
-            card = tk.Frame(grid, bg=CARD, padx=14, pady=12,
-                            highlightthickness=1,
-                            highlightbackground=c_borde)
-            card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+            for i, (nombre, res) in enumerate(resultados.items()):
+                col = i % 3
+                row = i // 3
+                grid.columnconfigure(col, weight=1)
 
-            tk.Label(card, text=nombre, bg=CARD, fg=SUBTEXT,
-                     font=("Segoe UI", 9)).pack(anchor="w")
-            tk.Label(card, text=estado, bg=CARD, fg=c_borde,
-                     font=("Segoe UI", 13, "bold")).pack(anchor="w", pady=(2, 8))
-            tk.Frame(card, bg=BORDER, height=1).pack(fill="x", pady=(0, 8))
+                c_borde = GREEN if res["aprueba"] else RED
+                estado  = "✅  APRUEBA" if res["aprueba"] else "❌  FALLA"
 
-            for linea in self._detalle(nombre, res):
-                tk.Label(card, text=linea, bg=CARD, fg=TEXT,
-                         font=FONT_SMALL, anchor="w").pack(anchor="w")
+                card = tk.Frame(grid, bg=CARD, padx=14, pady=12,
+                                highlightthickness=1,
+                                highlightbackground=c_borde)
+                card.grid(row=row, column=col, padx=6, pady=6, sticky="nsew")
+
+                tk.Label(card, text=nombre, bg=CARD, fg=SUBTEXT,
+                         font=("Segoe UI", 9)).pack(anchor="w")
+                tk.Label(card, text=estado, bg=CARD, fg=c_borde,
+                         font=("Segoe UI", 13, "bold")).pack(anchor="w", pady=(2, 8))
+                tk.Frame(card, bg=BORDER, height=1).pack(fill="x", pady=(0, 8))
+
+                for linea in self._detalle(nombre, res):
+                    tk.Label(card, text=linea, bg=CARD, fg=TEXT,
+                             font=FONT_SMALL, anchor="w").pack(anchor="w")
+
+            if seq_idx < n_seqs - 1:
+                tk.Frame(self._res_inner, bg=BORDER, height=1).pack(
+                    fill="x", padx=20, pady=(8, 0))
 
         self._res_scroll.refresh()
 
-        # Secuencia
+        # Pestaña Secuencia — muestra la primera secuencia
         self._seq_text.config(state="normal")
         self._seq_text.delete("1.0", "end")
-        self._seq_text.insert("end", f"{'#':>7}   {'Ri':>16}   Generador\n")
-        self._seq_text.insert("end", "─" * 55 + "\n")
+        lbl0 = self._resultados_por_seq[0][0] if self._resultados_por_seq else ""
+        self._seq_text.insert("end", f"{'#':>7}   {'Ri':>16}   {lbl0}\n")
+        self._seq_text.insert("end", "─" * 60 + "\n")
         for i, v in enumerate(self._secuencia[:500], 1):
             self._seq_text.insert("end",
                 f"{i:>7}   {v:>16.8f}   {self._nombre_gen}\n")
+        if len(self._secuencia) > 500:
+            self._seq_text.insert("end",
+                f"\n  ... mostrando primeros 500 de {len(self._secuencia):,}\n")
         self._seq_text.config(state="disabled")
 
-        # Gráficos
+        # Gráficos — primera secuencia
         if MATPLOTLIB_OK:
             self._generar_graficos()
 
         self._status(
-            f"✅ Listo · {aprobadas}/{total} pruebas aprobadas", GREEN)
+            f"✅ Listo · {total_aprobadas}/{total_pruebas} pruebas aprobadas "
+            f"en {n_seqs} secuencia(s)", GREEN)
+
+        # Actualizar pestaña Generador
+        self._mostrar_generador()
         self._nb.select(0)
+
+    # ──────────────────────────────────────────────────────
+    def _mostrar_generador(self):
+        """Pestaña Generador: stats basicas + histograma por secuencia."""
+        for w in self._gen_inner.winfo_children():
+            w.destroy()
+
+        hdr = tk.Frame(self._gen_inner, bg=BG)
+        hdr.pack(fill="x", padx=20, pady=(16, 4))
+        tk.Label(hdr, text=self._nombre_gen, bg=BG, fg=WHITE,
+                 font=FONT_TITLE).pack(anchor="w")
+        n_seqs = len(self._secuencias_gen)
+        info = (f"{n_seqs} secuencia(s)  -  N = {len(self._secuencia):,} por secuencia"
+                if n_seqs > 1 else
+                f"N = {len(self._secuencia):,} numeros generados")
+        tk.Label(hdr, text=info, bg=BG, fg=SUBTEXT, font=FONT_BODY).pack(anchor="w")
+        tk.Frame(self._gen_inner, bg=BORDER, height=1).pack(
+            fill="x", padx=20, pady=(12, 0))
+
+        if not MATPLOTLIB_OK:
+            tk.Label(self._gen_inner, text="matplotlib no disponible.",
+                     bg=BG, fg=RED, font=FONT_BODY).pack(pady=20)
+            self._gen_scroll.refresh()
+            return
+
+        plt.style.use("dark_background")
+
+        for seq_idx, (lbl, seq) in enumerate(self._secuencias_gen):
+            # Encabezado de secuencia
+            sec_hdr = tk.Frame(self._gen_inner, bg=CARD2, padx=16, pady=8)
+            sec_hdr.pack(fill="x", padx=16, pady=(12, 4))
+            tk.Label(sec_hdr,
+                     text=f"Secuencia {seq_idx+1}  -  {lbl}",
+                     bg=CARD2, fg=ACCENT,
+                     font=("Segoe UI", 10, "bold")).pack(side="left")
+            tk.Label(sec_hdr,
+                     text=f"N = {len(seq):,}",
+                     bg=CARD2, fg=SUBTEXT,
+                     font=("Segoe UI", 10)).pack(side="right")
+
+            # Tarjetas de stats basicas
+            stats_frame = tk.Frame(self._gen_inner, bg=BG)
+            stats_frame.pack(fill="x", padx=16, pady=(4, 8))
+
+            media  = sum(seq) / len(seq)
+            var    = sum((x - media)**2 for x in seq) / (len(seq) - 1)
+            mn, mx = min(seq), max(seq)
+            rango  = mx - mn
+
+            stats = [
+                ("Media muestral", f"{media:.6f}",  ACCENT),
+                ("Varianza",       f"{var:.6f}",    YELLOW),
+                ("Minimo",         f"{mn:.6f}",     GREEN),
+                ("Maximo",         f"{mx:.6f}",     GREEN),
+                ("Rango",          f"{rango:.6f}",  SUBTEXT),
+                ("Media teorica",  "0.500000",      SUBTEXT),
+            ]
+            for col_i, (label, valor, color) in enumerate(stats):
+                stats_frame.columnconfigure(col_i, weight=1)
+                card = tk.Frame(stats_frame, bg=CARD, padx=14, pady=10,
+                                highlightthickness=1, highlightbackground=BORDER)
+                card.grid(row=0, column=col_i, padx=5, sticky="nsew")
+                tk.Label(card, text=label, bg=CARD, fg=SUBTEXT,
+                         font=("Segoe UI", 9)).pack(anchor="w")
+                tk.Label(card, text=valor, bg=CARD, fg=color,
+                         font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(4, 0))
+
+            # Histograma + dispersion side by side
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 3.8),
+                                            facecolor="#0D1117")
+            fig.subplots_adjust(wspace=0.35)
+
+            for ax in (ax1, ax2):
+                ax.set_facecolor("#161B22")
+                for sp in ax.spines.values():
+                    sp.set_color(BORDER)
+                ax.tick_params(colors=SUBTEXT, labelsize=8)
+
+            # Histograma
+            ax1.hist(seq, bins=20, color=ACCENT, alpha=0.85,
+                     edgecolor="#0D1117", linewidth=0.5)
+            ax1.axvline(media, color=YELLOW, linestyle="--",
+                        linewidth=1.5, label=f"Media = {media:.4f}")
+            ax1.axvline(0.5,   color=GREEN,  linestyle=":",
+                        linewidth=1.2, label="Media teorica (0.5)")
+            ax1.set_xlabel("Valor Ri", fontsize=9, color=SUBTEXT)
+            ax1.set_ylabel("Frecuencia", fontsize=9, color=SUBTEXT)
+            ax1.set_title(f"Histograma  -  {lbl}", fontsize=9, color=TEXT, pad=8)
+            ax1.legend(fontsize=7, loc="upper right")
+
+            # Dispersion Ri vs Ri+1 (prueba visual de independencia)
+            ax2.scatter(seq[:-1], seq[1:], s=2, color=ACCENT, alpha=0.4)
+            ax2.set_xlabel("Ri", fontsize=9, color=SUBTEXT)
+            ax2.set_ylabel("Ri+1", fontsize=9, color=SUBTEXT)
+            ax2.set_title("Dispersion Ri vs Ri+1", fontsize=9, color=TEXT, pad=8)
+
+            canvas = FigureCanvasTkAgg(fig, master=self._gen_inner)
+            canvas.draw()
+            canvas.get_tk_widget().pack(fill="x", padx=16, pady=(0, 8))
+            plt.close(fig)
+
+            if seq_idx < n_seqs - 1:
+                tk.Frame(self._gen_inner, bg=BORDER, height=1).pack(
+                    fill="x", padx=20, pady=(4, 0))
+
+        self._gen_scroll.refresh()
 
     def _detalle(self, nombre, res):
         if nombre == "Medias":

@@ -56,7 +56,11 @@ def prueba_rachas(secuencia, nivel_confianza=0.95):
     varianza_esperada = (2 * n1 * n2 * (2 * n1 * n2 - N)) / (N**2 * (N - 1))
 
     # Estadístico Z
-    z_calculado = (rachas - rachas_esperadas) / math.sqrt(varianza_esperada)
+    if varianza_esperada <= 0 or n1 == 0 or n2 == 0:
+        z_calculado = float("nan")
+        aprueba = False
+    else:
+        z_calculado = (rachas - rachas_esperadas) / math.sqrt(varianza_esperada)
 
     # Valor crítico Z calculado dinámicamente según nivel de confianza
     z_critico = norm.ppf(1 - (1 - nivel_confianza) / 2)

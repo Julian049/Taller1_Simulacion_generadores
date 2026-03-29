@@ -33,9 +33,7 @@ def prueba_chi_cuadrado(secuencia, nivel_confianza=0.95):
     # Contar frecuencias observadas en cada intervalo
     frecuencias_observadas = [0] * k
     for numero in secuencia:
-        indice = int(numero * k)
-        if indice == k:  # caso borde: cuando número es exactamente 1.0
-            indice = k - 1
+        indice = min(int(numero * k), k - 1)
         frecuencias_observadas[indice] += 1
 
     # Calcular estadístico chi-cuadrado
