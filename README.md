@@ -1,28 +1,28 @@
 # Generadores de Números Pseudoaleatorios
 
-Proyecto en Python para generar números pseudoaleatorios mediante distintos algoritmos, incluyendo generadores base, distribuciones uniformes y distribución normal.
+Proyecto en Python para generar números pseudoaleatorios mediante distintos algoritmos, incluyendo generadores base, distribuciones uniformes y distribución normal. También incluye pruebas estadísticas para verificar la calidad de las secuencias generadas.
 
 ---
 
 ## Requisitos
 
 - Python 3.10 o superior
-- No se necesitan dependencias externas
+- Dependencias: `scipy`, `matplotlib`
 
 Para ejecutar la interfaz gráfica:
 
 ```bash
-python ui.py
+python app.py
 ```
 
-Para usar los generadores directamente desde código, importar desde `generators.py`.
+La lógica de generación y pruebas está desacoplada de la interfaz. Para usar los generadores o pruebas directamente desde código, importar desde `generators.py` o desde los archivos de prueba correspondientes.
 
 ---
 
 ## Archivos del proyecto
 
 ```
-punto3_generadores/
+proyecto/
 ├── archivos/
 │   ├── mid_square.csv              # Ejemplo de semillas para Cuadrados Medios
 │   ├── congruence.csv              # Ejemplo de parámetros para el método Congruencial
@@ -31,7 +31,13 @@ punto3_generadores/
 │   ├── normal_mid_square.csv       # Ejemplo de parámetros para Normal – Cuadrados Medios
 │   └── normal_congruence.csv       # Ejemplo de parámetros para Normal – Congruencial
 ├── generators.py                   # Algoritmos de generación de números pseudoaleatorios
-├── ui.py                           # Interfaz gráfica (Tkinter)
+├── prueba_medias.py                # Prueba estadística de medias
+├── prueba_varianza.py              # Prueba estadística de varianza
+├── prueba_chi_cuadrado.py          # Prueba Chi-Cuadrado
+├── prueba_ks.py                    # Prueba de Kolmogorov-Smirnov
+├── prueba_poker.py                 # Prueba de Póker
+├── prueba_rachas.py                # Prueba de Rachas
+├── app.py                          # Interfaz gráfica
 └── import_seeds.py                 # Lectura de semillas desde archivos CSV
 ```
 
@@ -55,7 +61,7 @@ Eleva la semilla al cuadrado, extrae los dígitos centrales y usa ese resultado 
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import mid_square
+from generators import mid_square
 
 resultados = mid_square(1234, 5)
 print(resultados)  # [0.5227, 0.3215, ...]
@@ -90,7 +96,7 @@ Donde `a = 1 + 2k` y `m = 2^g`.
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import congruence
+from generators import congruence
 
 resultados = congruence(xo=7, k=100, c=21, g=12, number_ri=10)
 ```
@@ -113,7 +119,7 @@ Variante del método congruencial donde el multiplicador es 0 (`k=0`).
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import congruence_additive
+from generators import congruence_additive
 
 resultados = congruence_additive(xo=5, c=15, g=10, number_ri=10)
 ```
@@ -136,7 +142,7 @@ Variante del método congruencial donde el incremento es 0 (`c=0`).
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import congruence_multiplicative
+from generators import congruence_multiplicative
 
 resultados = congruence_multiplicative(xo=3, k=200, g=14, number_ri=10)
 ```
@@ -153,11 +159,11 @@ Ni = range_min + (range_max - range_min) * Ri
 
 **Parámetros:**
 
-| Parámetro   | Tipo         | Descripción                              |
-|-------------|--------------|------------------------------------------|
-| `list_ri`   | `list[float]`| Lista de valores Ri entre 0 y 1.         |
-| `range_min` | `float`      | Límite inferior del rango de salida.     |
-| `range_max` | `float`      | Límite superior del rango de salida.     |
+| Parámetro   | Tipo          | Descripción                              |
+|-------------|---------------|------------------------------------------|
+| `list_ri`   | `list[float]` | Lista de valores Ri entre 0 y 1.         |
+| `range_min` | `float`       | Límite inferior del rango de salida.     |
+| `range_max` | `float`       | Límite superior del rango de salida.     |
 
 **Retorna:** `list[float]` — valores distribuidos en el rango especificado.
 
@@ -181,7 +187,7 @@ Genera números con distribución uniforme en `[range_min, range_max]` usando el
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import uniform_mid_square
+from generators import uniform_mid_square
 
 resultados = uniform_mid_square(seed=1234, range_min=4, range_max=100, number_ri=10)
 ```
@@ -209,7 +215,7 @@ Genera números con distribución uniforme en `[range_min, range_max]` usando el
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import uniform_distribution_congruence
+from generators import uniform_distribution_congruence
 
 resultados = uniform_distribution_congruence(xo=7, k=100, c=21, g=12, range_min=4, range_max=100, number_ni=10)
 ```
@@ -234,7 +240,7 @@ Variante del uniforme congruencial donde el multiplicador es 0 (`k=0`).
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import uniform_distribution_additive
+from generators import uniform_distribution_additive
 
 resultados = uniform_distribution_additive(xo=5, c=15, g=10, range_min=10, range_max=20, number_ni=10)
 ```
@@ -259,7 +265,7 @@ Variante del uniforme congruencial donde el incremento es 0 (`c=0`).
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import uniform_distribution_multiplicative
+from generators import uniform_distribution_multiplicative
 
 resultados = uniform_distribution_multiplicative(xo=3, k=200, g=14, range_min=100, range_max=200, number_ni=10)
 ```
@@ -328,7 +334,7 @@ Genera valores con distribución normal usando el método de Congruencia Lineal 
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import normal_distribution_congruence
+from generators import normal_distribution_congruence
 
 resultados = normal_distribution_congruence(xo=7, k=100, c=21, g=12, mean=3.5, std_dev=0.4, number_ni=10)
 ```
@@ -353,10 +359,102 @@ Genera valores con distribución normal usando el método de Cuadrados Medios co
 **Ejemplo:**
 
 ```python
-from punto3_generadores.generators import normal_distribution_mid_square
+from generators import normal_distribution_mid_square
 
 resultados = normal_distribution_mid_square(seed=5678, mean=3.5, std_dev=0.4, number_ni=10)
 ```
+
+---
+
+## Pruebas estadísticas
+
+Todas las pruebas reciben una `secuencia` (lista de números pseudoaleatorios entre 0 y 1) y un `nivel_confianza` (por defecto 0.95). Cada función retorna un diccionario con los valores calculados e incluye un campo `aprueba` (`True`/`False`). Cada archivo también expone una función de gráfico correspondiente que guarda la imagen como PNG y la muestra en pantalla.
+
+---
+
+### 1. Prueba de Medias — `prueba_medias.py`
+
+Verifica que la media muestral de la secuencia sea estadísticamente cercana a 0.5, valor esperado de una distribución uniforme U(0,1). Construye un intervalo de confianza usando el estadístico Z y comprueba si la media muestral cae dentro de ese rango.
+
+```python
+from prueba_medias import prueba_medias
+
+resultado = prueba_medias(secuencia, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `media_muestral`, `media_teorica`, `valor_z`, `margen`, `limite_inferior`, `limite_superior`, `aprueba`.
+
+El archivo también expone `grafico_distribucion_medias(lista_medias)` para visualizar la distribución de medias cuando se ejecutan múltiples simulaciones.
+
+---
+
+### 2. Prueba de Varianza — `prueba_varianza.py`
+
+Verifica que la varianza muestral sea estadísticamente cercana a 1/12 ≈ 0.0833, valor esperado de una U(0,1). Utiliza los cuantiles de la distribución Chi-cuadrado para construir el intervalo de confianza de la varianza.
+
+```python
+from prueba_varianza import prueba_varianza
+
+resultado = prueba_varianza(secuencia, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `varianza_muestral`, `varianza_teorica`, `alpha`, `grados_libertad`, `chi2_inferior`, `chi2_superior`, `limite_inferior`, `limite_superior`, `aprueba`.
+
+---
+
+### 3. Prueba Chi-Cuadrado — `prueba_chi_cuadrado.py`
+
+Divide el intervalo [0,1] en `k` subintervalos (calculado automáticamente como `max(10, √N)`) y compara las frecuencias observadas en cada uno contra la frecuencia esperada teórica. El estadístico resultante se compara contra el valor crítico Chi-cuadrado con `k-1` grados de libertad.
+
+```python
+from prueba_chi_cuadrado import prueba_chi_cuadrado
+
+resultado = prueba_chi_cuadrado(secuencia, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `k`, `frecuencias_observadas`, `frecuencia_esperada`, `chi2_calculado`, `chi2_critico`, `grados_libertad`, `aprueba`.
+
+---
+
+### 4. Prueba de Kolmogorov-Smirnov — `prueba_ks.py`
+
+Compara la función de distribución acumulada empírica de la secuencia contra la distribución uniforme teórica U(0,1). Calcula la máxima diferencia absoluta entre ambas (DMAX) y la compara contra el valor crítico `DMAXP = 1.36 / √N`.
+
+```python
+from prueba_ks import prueba_ks
+
+resultado = prueba_ks(secuencia, k=10, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `k`, `tabla` (lista de intervalos con frecuencias y diferencias acumuladas), `dmax`, `dmaxp`, `aprueba`.
+
+---
+
+### 5. Prueba de Póker — `prueba_poker.py`
+
+Verifica la independencia de los números analizando los patrones formados por sus 5 dígitos decimales significativos. Clasifica cada número en una de 7 categorías (todos diferentes, un par, dos pares, tercia, full house, póker, quintilla) y compara las frecuencias observadas contra las esperadas mediante un estadístico Chi-cuadrado con 6 grados de libertad.
+
+```python
+from prueba_poker import prueba_poker
+
+resultado = prueba_poker(secuencia, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `tabla` (categoría, frecuencia observada, probabilidad teórica, frecuencia esperada, contribución al Chi-cuadrado), `chi2_calculado`, `chi2_critico`, `grados_libertad`, `aprueba`.
+
+---
+
+### 6. Prueba de Rachas — `prueba_rachas.py`
+
+Verifica la aleatoriedad detectando patrones de agrupamiento. Clasifica cada número como `+` si es mayor o igual a la mediana de la secuencia y `-` si es menor, luego cuenta las rachas (grupos consecutivos del mismo signo) y compara el total observado contra el esperado teórico mediante un estadístico Z.
+
+```python
+from prueba_rachas import prueba_rachas
+
+resultado = prueba_rachas(secuencia, nivel_confianza=0.95)
+```
+
+**Retorna:** `N`, `mediana`, `mediana_teorica`, `n1_positivos`, `n2_negativos`, `rachas_observadas`, `rachas_esperadas`, `varianza_esperada`, `z_calculado`, `z_critico`, `rango_minimo`, `rango_maximo`, `aprueba`.
 
 ---
 
@@ -404,8 +502,6 @@ seed,min,max
 9101,100,200
 ```
 
-Cada fila representa una simulación independiente. El valor de `seed` debe ser un entero con al menos 3 dígitos.
-
 ---
 
 ### `uniform_congruence.csv` — Parámetros para Uniforme – Congruencial
@@ -418,8 +514,6 @@ xo,k,c,g,min,max
 5,50,15,10,10,20
 3,200,31,14,100,200
 ```
-
-Cada fila representa una simulación independiente.
 
 ---
 
@@ -434,8 +528,6 @@ seed,mean,std_dev
 9101,20,0.5
 ```
 
-Cada fila representa una simulación independiente. El valor de `seed` debe ser un entero con al menos 3 dígitos. La cantidad de números a generar debe ser par.
-
 ---
 
 ### `normal_congruence.csv` — Parámetros para Normal – Congruencial
@@ -449,15 +541,14 @@ xo,k,c,g,mean,std_dev
 3,200,31,14,20,0.5
 ```
 
-Cada fila representa una simulación independiente. La cantidad de números a generar debe ser par.
+La cantidad de números a generar debe ser par en todos los métodos de distribución normal.
 
 ---
 
-## Interfaz gráfica (`ui.py`)
+## Interfaz gráfica (`app.py`)
 
-La interfaz permite seleccionar el algoritmo, ingresar los parámetros manualmente o cargar un archivo CSV con múltiples semillas, y visualizar los resultados en una ventana separada con scroll. Los métodos están organizados en tres grupos: **Generadores base**, **Distribución uniforme** y **Distribución normal**.
+La interfaz permite seleccionar el algoritmo, ingresar los parámetros manualmente o cargar un archivo CSV con múltiples semillas, y visualizar los resultados. Los métodos están organizados en tres grupos: **Generadores base**, **Distribución uniforme** y **Distribución normal**.
 
-- Los métodos **Aditivo** y **Multiplicativo** (en los grupos de generadores base y distribución uniforme) no admiten carga de CSV y solo se pueden ingresar manualmente. Esto es intencional: ambos son casos particulares del Congruencial Mixto — el aditivo fija `k=0` y el multiplicativo fija `c=0`. Si se quisieran ejecutar desde un archivo CSV, bastaría con usar el método **Congruencial** con esos valores en cero directamente en el archivo.
-- Los métodos **Cuadrados Medios** y **Congruencial** (en los tres grupos) soportan carga de archivos CSV.
-- Los métodos de **Distribución normal** requieren que la cantidad de números a generar sea un número par, dado que Box-Muller produce los valores en pares.
-- Los resultados se muestran agrupados por simulación, indicando los parámetros usados en cada una.
+- Los métodos **Aditivo** y **Multiplicativo** no admiten carga de CSV y solo se pueden ingresar manualmente, ya que son casos particulares del Congruencial Mixto.
+- Los métodos **Cuadrados Medios** y **Congruencial** soportan carga de archivos CSV.
+- Los métodos de **Distribución normal** requieren que la cantidad de números a generar sea par, dado que Box-Muller produce los valores en pares.
